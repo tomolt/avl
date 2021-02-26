@@ -125,45 +125,44 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 		if (balan < -1 || balan > 1) {
 			balance(edge);
 		}
-		//if (!balan) break;
+		if (!balan) break;
 	}
 	
 	return 0;
 }
 
-#if 1
-
 #include <stdio.h>
 
-static uintmax_t nextId;
-
 static void
-graph_rec(Edge edge, uintmax_t parent, FILE *file)
+graph_rec(Edge edge, int col, FILE *file)
 {
 	Node *node;
-	uintmax_t id = nextId++;
 	
-	if (edge) {
-		node = NODE(edge);
-		fprintf(file, "\tn%ju -> n%ju [label = \"%d\"];\n", parent, id, BALAN(edge));
-		fprintf(file, "\tn%ju [label = \"%ju\"];\n", id, node->key);
-		graph_rec(node->edges[0], id, file);
-		graph_rec(node->edges[1], id, file);
-	} else {
-		fprintf(file, "\tn%ju -> l%ju [style = invis];\n", parent, id);
-		fprintf(file, "\tl%ju [style = invis];\n", id);
+	node = NODE(edge);
+	fprintf(file, " %+d[%03ju]", BALAN(edge), node->key);
+	col += 8;
+
+	if (node->edges[0]) {
+		graph_rec(node->edges[0], col, file);
+	}
+
+	if (node->edges[1]) {
+		putc('\n', file);
+		for (int i = 0; i < col; ++i) {
+			putc(' ', file);
+		}
+
+		graph_rec(node->edges[1], col, file);
 	}
 }
 
 static void
 avl_graph(AVL avl, FILE *file)
 {
-	fprintf(file, "digraph AVL {\n");
-	fprintf(file, "\tnode [shape = record];\n");
-	fprintf(file, "\tn0 [label = \"AVL\"];\n");
-	nextId = 1;
-	graph_rec((Edge) avl, 0, file);
-	fprintf(file, "}\n");
+	if (avl) {
+		graph_rec((Edge) avl, 0, file);
+		putc('\n', file);
+	}
 }
 
 int
@@ -172,12 +171,10 @@ main()
 	AVL avl = NULL;
 	int i;
 	srand(0);
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 100; i++) {
 		avl_insert(&avl, rand() % 1000, NULL);
 	}
 	avl_graph(avl, stdout);
 	return 0;
 }
-
-#endif
 
