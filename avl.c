@@ -180,6 +180,29 @@ avl_delete(AVL *avl, uintmax_t key)
 	return 0;
 }
 
+void
+avl_free(AVL *avl)
+{
+	Edge stack[MAXDEPTH];
+	Edge edge;
+	Node *node;
+	int depth = 0;
+
+	stack[depth++] = (Edge) *avl;
+	while (depth) {
+		edge = stack[--depth];
+		node = NODE(edge);
+		if (node->edges[0]) {
+			stack[depth++] = node->edges[0];
+		}
+		if (node->edges[1]) {
+			stack[depth++] = node->edges[1];
+		}
+		free(node);
+	}
+	*avl = NULL;
+}
+
 static int
 check_edge(Edge edge)
 {
@@ -253,6 +276,7 @@ main()
 			break;
 		}
 	}
+	avl_free(&Tree);
 	return 0;
 }
 
