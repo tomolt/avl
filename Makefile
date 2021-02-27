@@ -14,6 +14,6 @@ clean:
 avl: avl.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-avl.o: avl.c
+avl.o: avl.c avl.h
 	$(CC) $(CFLAGS) -c $< -o $@
 

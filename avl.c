@@ -1,6 +1,7 @@
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "avl.h"
 
 #define MAXDEPTH 64
 
@@ -17,7 +18,6 @@
 
 typedef struct Node Node;
 typedef intptr_t Edge;
-typedef void *AVL;
 
 struct Node {
 	uintmax_t key;
@@ -249,7 +249,7 @@ graph_rec(Edge edge, int col, FILE *file)
 	}
 }
 
-static void
+void
 avl_graph(AVL avl, FILE *file)
 {
 	if (avl) {
