@@ -17,7 +17,7 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
 typedef struct Node Node;
-typedef intptr_t Edge;
+typedef intptr_t    Edge;
 
 struct Node {
 	uintmax_t key;
@@ -77,7 +77,7 @@ avl_lookup(AVL *avl, uintmax_t key, void **value)
 	Node *node;
 	int d;
 	
-	edge = (Edge *) avl;
+	edge = avl;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -100,7 +100,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	int depth = 0, d;
 	int balan;
 
-	edge = (Edge *) avl;
+	edge = avl;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -144,7 +144,7 @@ avl_delete(AVL *avl, uintmax_t key)
 	int depth = 0, d;
 	int balan;
 
-	edge = (Edge *) avl;
+	edge = avl;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -186,7 +186,7 @@ avl_free(AVL *avl)
 	Node *node;
 	int depth = 0;
 
-	stack[depth++] = (Edge) *avl;
+	stack[depth++] = *avl;
 	while (depth) {
 		edge = stack[--depth];
 		node = NODE(edge);
@@ -198,7 +198,7 @@ avl_free(AVL *avl)
 		}
 		free(node);
 	}
-	*avl = NULL;
+	*avl = 0;
 }
 
 static int
@@ -221,11 +221,11 @@ check_edge(Edge edge)
 int
 avl_check(AVL avl)
 {
-	return check_edge((Edge) avl);
+	return check_edge(avl);
 }
 
 static void
-graph_rec(Edge edge, int col, FILE *file)
+print_edge(Edge edge, int col, FILE *file)
 {
 	Node *node;
 	
@@ -234,7 +234,7 @@ graph_rec(Edge edge, int col, FILE *file)
 	col += 8;
 
 	if (node->edges[0]) {
-		graph_rec(node->edges[0], col, file);
+		print_edge(node->edges[0], col, file);
 	}
 
 	if (node->edges[1]) {
@@ -243,15 +243,15 @@ graph_rec(Edge edge, int col, FILE *file)
 			putc(' ', file);
 		}
 
-		graph_rec(node->edges[1], col, file);
+		print_edge(node->edges[1], col, file);
 	}
 }
 
 void
-avl_graph(AVL avl, FILE *file)
+avl_print(AVL avl, void *file)
 {
 	if (avl) {
-		graph_rec((Edge) avl, 0, file);
+		print_edge(avl, 0, file);
 		putc('\n', file);
 	}
 }
