@@ -39,8 +39,6 @@ rotate(Edge *e, int d)
 	y = BALAN(*f);
 	g = &b->edges[!d];
 	
-	printf("ROT [%03ju] %s\n", a->key, d ? "CCW" : "CW");
-
 	if (d) { /* CCW rotation */
 		x = x - 1 - MAX(y, 0);
 		y = y - 1 + MIN(x, 0);
@@ -82,13 +80,13 @@ avl_lookup(AVL *avl, uintmax_t key, void **value)
 		node = NODE(*edge);
 		if (key == node->key) {
 			*value = node->value;
-			return 0;
+			return 1;
 		}
 		d = key > node->key;
 		edge = &node->edges[d];
 	}
 	
-	return -1;
+	return 0;
 }
 
 int
@@ -132,7 +130,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 		if (!balan) break;
 	}
 	
-	return 0;
+	return 1;
 }
 
 int
@@ -157,7 +155,7 @@ avl_delete(AVL *avl, uintmax_t key)
 		edge = &node->edges[d];
 	}
 
-	if (!target) return -1;
+	if (!target) return 0;
 	target->key = node->key;
 	target->value = node->value;
 	*edge = 0;
@@ -175,7 +173,7 @@ avl_delete(AVL *avl, uintmax_t key)
 		if (balan) break;
 	}
 
-	return 0;
+	return 1;
 }
 
 void
@@ -201,27 +199,21 @@ avl_free(AVL *avl)
 	*avl = 0;
 }
 
-static int
-check_edge(Edge edge)
+int
+avl_check(AVL avl)
 {
 	Node *node;
 	int bal, l, h;
-	if (!edge) return 0;
-	node = NODE(edge);
-	bal  = BALAN(edge);
-	l = check_edge(node->edges[0]);
+	if (!avl) return 0;
+	node = NODE(avl);
+	bal  = BALAN(avl);
+	l = avl_check(node->edges[0]);
 	if (l < 0) return l;
-	h = check_edge(node->edges[1]);
+	h = avl_check(node->edges[1]);
 	if (h < 0) return h;
 	if (bal != h - l) return -1;
 	if (bal < -1 || bal > 1) return -2;
 	return MAX(l, h) + 1;
-}
-
-int
-avl_check(AVL avl)
-{
-	return check_edge(avl);
 }
 
 static void
