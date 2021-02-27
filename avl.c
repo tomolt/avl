@@ -137,6 +137,49 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	return 0;
 }
 
+int
+avl_delete(AVL *avl, uintmax_t key)
+{
+	uintptr_t stack[MAXDEPTH];
+	Edge *edge;
+	Node *node, *target;
+	int depth = 0, d;
+	int balan;
+
+	edge = (Edge *) avl;
+	while (*edge) {
+		node = NODE(*edge);
+		if (key == node->key) {
+			target = node;
+			d = BALAN(*edge) > 0;
+		} else {
+			d = key > node->key;
+		}
+		PUSH(stack, depth, d, edge);
+		edge = &node->edges[d];
+	}
+
+	if (!target) return -1;
+	target->key = node->key;
+	target->value = node->value;
+	*edge = 0;
+	free(node);
+
+	while (depth) {
+		POP(stack, depth, d, edge);
+		balan = BALAN(*edge);
+		balan -= d ? 1 : -1;
+		*edge = EDGE(NODE(*edge), balan);
+		if (balan < -1 || balan > 1) {
+			balance(edge);
+		}
+		balan = BALAN(*edge);
+		if (balan) break;
+	}
+
+	return 0;
+}
+
 static int
 check_edge(Edge edge)
 {
