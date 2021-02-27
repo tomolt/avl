@@ -8,12 +8,15 @@ LDFLAGS=-g
 all: avl
 
 clean:
-	rm -f avl.o
+	rm -f *.o
 	rm -f avl
 
-avl: avl.o
+avl: avl.o driver.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
 avl.o: avl.c avl.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+driver.o: driver.c avl.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
