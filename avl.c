@@ -77,6 +77,40 @@ balance(Edge *e)
 	rotate(e, d);
 }
 
+static void
+retrace(AVL *avl, Node *node, int grow,
+	uintptr_t stack[], int *depth)
+{
+	Node *parent;
+	int d, chg = 1;
+	for (;;) {
+		if (!*depth) {
+			avl->root = node;
+			break;
+		}
+		d = stack[--*depth] & 1;
+		parent = (Node *) (stack[*depth] ^ d);
+		parent->edges[d] = node;
+		if (!chg) {
+			break;
+		}
+		if (grow) {
+			parent->bal += d ? 1 : -1;
+		} else {
+			parent->bal -= d ? 1 : -1;
+		}
+		if (parent->bal < -1 || parent->bal > 1) {
+			balance(&parent);
+		}
+		node = parent;
+		if (grow) {
+			chg = node->bal != 0;
+		} else {
+			chg = node->bal == 0;
+		}
+	}
+}
+
 void
 avl_init(AVL *avl)
 {
@@ -104,9 +138,8 @@ int
 avl_insert(AVL *avl, uintmax_t key, void *value)
 {
 	uintptr_t stack[MAXDEPTH];
-	Node *node, *parent;
-	int depth = 0, d;
-	int first;
+	Node *node;
+	int depth = 0;
 
 	node = path_to(avl->root, key, stack, &depth);
 	if (node) {
@@ -121,23 +154,8 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	node->edges[0] = 0;
 	node->edges[1] = 0;
 	node->bal = 0;
-	first = 1;
 
-	while (depth) {
-		d = stack[--depth] & 1;
-		parent = (Node *) (stack[depth] ^ d);
-		parent->edges[d] = node;
-		if (!first && !node->bal) goto done;
-		parent->bal += d ? 1 : -1;
-		if (parent->bal < -1 || parent->bal > 1) {
-			balance(&parent);
-		}
-		node = parent;
-		first = 0;
-	}
-	avl->root = node;
-	
-done:
+	retrace(avl, node, 1, stack, &depth);
 	return 1;
 }
 
@@ -145,9 +163,8 @@ int
 avl_delete(AVL *avl, uintmax_t key)
 {
 	uintptr_t stack[MAXDEPTH];
-	Node *node, *parent, *target = NULL, *child;
+	Node *node, *target = NULL, *child;
 	int depth = 0, d;
-	int first;
 
 	node = avl->root;
 	while (node) {
@@ -170,23 +187,8 @@ avl_delete(AVL *avl, uintmax_t key)
 	child = node->edges[!d];
 	free(node);
 	node = child;
-	first = 1;
 
-	while (depth) {
-		d = stack[--depth] & 1;
-		parent = (Node *) (stack[depth] ^ d);
-		parent->edges[d] = node;
-		if (!first && node->bal) goto done;
-		parent->bal -= d ? 1 : -1;
-		if (parent->bal < -1 || parent->bal > 1) {
-			balance(&parent);
-		}
-		node = parent;
-		first = 0;
-	}
-	avl->root = node;
-
-done:
+	retrace(avl, node, 0, stack, &depth);
 	return 1;
 }
 
@@ -235,14 +237,11 @@ static void
 print_node(Node *node, int col, FILE *file)
 {
 	int i;
-
 	fprintf(file, " %+d[%03ju]", node->bal, node->key);
 	col += 8;
-
 	if (node->edges[0]) {
 		print_node(node->edges[0], col, file);
 	}
-
 	if (node->edges[1]) {
 		putc('\n', file);
 		for (i = 0; i < col; ++i) {
