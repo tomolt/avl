@@ -68,6 +68,12 @@ balance(Edge *e)
 	rotate(e, x > 0);
 }
 
+void
+avl_init(AVL *avl)
+{
+	avl->root = 0;
+}
+
 int
 avl_lookup(AVL *avl, uintmax_t key, void **value)
 {
@@ -75,7 +81,7 @@ avl_lookup(AVL *avl, uintmax_t key, void **value)
 	Node *node;
 	int d;
 	
-	edge = avl;
+	edge = &avl->root;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -98,7 +104,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	int depth = 0, d;
 	int balan;
 
-	edge = avl;
+	edge = &avl->root;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -142,7 +148,7 @@ avl_delete(AVL *avl, uintmax_t key)
 	int depth = 0, d;
 	int balan;
 
-	edge = avl;
+	edge = &avl->root;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -185,7 +191,7 @@ avl_free(AVL *avl)
 	Node *node;
 	int depth = 0;
 
-	stack[depth++] = *avl;
+	stack[depth++] = avl->root;
 	while (depth) {
 		edge = stack[--depth];
 		node = NODE(edge);
@@ -197,24 +203,30 @@ avl_free(AVL *avl)
 		}
 		free(node);
 	}
-	*avl = 0;
+	avl->root = 0;
 }
 
-int
-avl_check(AVL avl)
+static int
+check_edge(Edge edge)
 {
 	Node *node;
 	int bal, l, h;
-	if (!avl) return 0;
-	node = NODE(avl);
-	bal  = BALAN(avl);
-	l = avl_check(node->edges[0]);
+	if (!edge) return 0;
+	node = NODE(edge);
+	bal  = BALAN(edge);
+	l = check_edge(node->edges[0]);
 	if (l < 0) return l;
-	h = avl_check(node->edges[1]);
+	h = check_edge(node->edges[1]);
 	if (h < 0) return h;
 	if (bal != h - l) return -1;
 	if (bal < -1 || bal > 1) return -2;
 	return MAX(l, h) + 1;
+}
+
+int
+avl_check(AVL *avl)
+{
+	return check_edge(avl->root);
 }
 
 static void
@@ -241,10 +253,10 @@ print_edge(Edge edge, int col, FILE *file)
 }
 
 void
-avl_print(AVL avl, void *file)
+avl_print(AVL *avl, void *file)
 {
-	if (avl) {
-		print_edge(avl, 0, file);
+	if (avl->root) {
+		print_edge(avl->root, 0, file);
 		putc('\n', file);
 	}
 }

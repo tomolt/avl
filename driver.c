@@ -73,7 +73,7 @@ drive(void)
 	int a, b;
 	int valid = 1, op;
 
-	_avl = 0;
+	avl_init(&_avl);
 	ref_init(&_ref);
 	srand(0);
 	
@@ -122,7 +122,7 @@ drive(void)
 			}
 			break;
 		case 3: /* consistency check */
-			a = avl_check(_avl);
+			a = avl_check(&_avl);
 			if (a < 0) {
 				valid = 0;
 			}
@@ -141,7 +141,7 @@ drive(void)
 		printf("%ju\t%ju\tSUCCESS\n", counter, _ref.num);
 	} else {
 		printf("%ju\t%ju\t%s FAILED\n", counter, _ref.num, OpNames[op]);
-		avl_print(_avl, stdout);
+		avl_print(&_avl, stdout);
 	}
 	
 	avl_free(&_avl);
