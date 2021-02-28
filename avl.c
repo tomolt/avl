@@ -77,19 +77,19 @@ avl_init(AVL *avl)
 int
 avl_lookup(AVL *avl, uintmax_t key, void **value)
 {
-	Edge *edge;
+	Edge edge;
 	Node *node;
 	int d;
 	
-	edge = &avl->root;
-	while (*edge) {
-		node = NODE(*edge);
+	edge = avl->root;
+	while (edge) {
+		node = NODE(edge);
 		if (key == node->key) {
 			*value = node->value;
 			return 1;
 		}
 		d = key > node->key;
-		edge = &node->edges[d];
+		edge = node->edges[d];
 	}
 	
 	return 0;
