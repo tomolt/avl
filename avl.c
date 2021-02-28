@@ -12,9 +12,6 @@
 #define PUSH(s,t,d,e) (s[t++]=(uintptr_t)e|d)
 #define POP(s,t,d,e)  (t--,d=s[t]&1,e=(Edge*)(s[t]^d))
 
-#define PUSHN(s,t,n,d) (s[t++]=(uintptr_t)n|d)
-#define POPN(s,t,n,d)  (t--,d=s[t]&1,n=(Node*)(s[t]^d))
-
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -101,19 +98,19 @@ avl_lookup(AVL *avl, uintmax_t key, void **value)
 int
 avl_insert(AVL *avl, uintmax_t key, void *value)
 {
-	uintptr_t stack[MAXDEPTH];
+	Node *stack[MAXDEPTH];
 	Node *node, *parent;
 	int depth = 0, d;
 	int first;
 
 	node = avl->root;
 	while (node) {
+		stack[depth++] = node;
 		if (key == node->key) {
 			node->value = value;
 			return 0;
 		}
 		d = key > node->key;
-		PUSHN(stack, depth, node, d);
 		node = NODE(node->edges[d]);
 	}
 
@@ -127,7 +124,8 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	first = 1;
 
 	while (depth) {
-		POPN(stack, depth, parent, d);
+		parent = stack[--depth];
+		d = key > parent->key;
 		parent->edges[d] = node;
 		if (!first && !node->bal) goto done;
 		parent->bal += d ? 1 : -1;
