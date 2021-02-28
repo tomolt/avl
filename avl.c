@@ -12,6 +12,9 @@
 #define PUSH(s,t,d,e) (s[t++]=(uintptr_t)e|d)
 #define POP(s,t,d,e)  (t--,d=s[t]&1,e=(Edge*)(s[t]^d))
 
+#define PUSHN(s,t,n,d) (s[t++]=(uintptr_t)n|d)
+#define POPN(s,t,n,d)  (t--,d=s[t]&1,n=(Node*)(s[t]^d))
+
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -99,21 +102,19 @@ int
 avl_insert(AVL *avl, uintmax_t key, void *value)
 {
 	uintptr_t stack[MAXDEPTH];
-	Edge *edge;
-	Node *node;
+	Node *node, *parent;
 	int depth = 0, d;
-	int balan;
+	int first;
 
-	edge = (Edge *) &avl->root;
-	while (*edge) {
-		node = NODE(*edge);
+	node = avl->root;
+	while (node) {
 		if (key == node->key) {
 			node->value = value;
 			return 0;
 		}
 		d = key > node->key;
-		PUSH(stack, depth, d, edge);
-		edge = &node->edges[d];
+		PUSHN(stack, depth, node, d);
+		node = NODE(node->edges[d]);
 	}
 
 	node = malloc(sizeof *node);
@@ -122,20 +123,23 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	node->value = value;
 	node->edges[0] = 0;
 	node->edges[1] = 0;
-	*edge = EDGE(node, 0);
+	node->bal = 0;
+	first = 1;
 
 	while (depth) {
-		POP(stack, depth, d, edge);
-		balan = BALAN(*edge);
-		balan += d ? 1 : -1;
-		*edge = EDGE(NODE(*edge), balan);
-		if (balan < -1 || balan > 1) {
-			balance(edge);
+		POPN(stack, depth, parent, d);
+		parent->edges[d] = node;
+		if (!first && !node->bal) goto done;
+		parent->bal += d ? 1 : -1;
+		if (parent->bal < -1 || parent->bal > 1) {
+			balance(&parent);
 		}
-		balan = BALAN(*edge);
-		if (!balan) break;
+		node = parent;
+		first = 0;
 	}
+	avl->root = node;
 	
+done:
 	return 1;
 }
 
