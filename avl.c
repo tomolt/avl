@@ -5,10 +5,6 @@
 
 #define MAXDEPTH 64
 
-#define NODE(e)   (e)
-#define BALAN(e)  (NODE(e)->bal)
-#define EDGE(n,b) ((n)->bal=(b),(n))
-
 #define PUSH(s,t,n,d) (s[(t)++]=(uintptr_t)n|d)
 #define POP(s,t,n,d)  (d=s[--(t)]&1,n=(Node*)(s[t]^d))
 
@@ -42,26 +38,23 @@ rotate(Edge *e, int d)
 {
 	Edge *f, *g;
 	Node *a, *b;
-	int x, y;
 
-	a = NODE(*e);
-	x = BALAN(*e);
+	a = *e;
 	f = &a->edges[d];
-	b = NODE(*f);
-	y = BALAN(*f);
+	b = *f;
 	g = &b->edges[!d];
 	
 	if (d) { /* CCW rotation */
-		x = x - 1 - MAX(y, 0);
-		y = y - 1 + MIN(x, 0);
+		a->bal = a->bal - 1 - MAX(b->bal, 0);
+		b->bal = b->bal - 1 + MIN(a->bal, 0);
 	} else { /* CW rotation */
-		x = x + 1 - MIN(y, 0);
-		y = y + 1 + MAX(x, 0);
+		a->bal = a->bal + 1 - MIN(b->bal, 0);
+		b->bal = b->bal + 1 + MAX(a->bal, 0);
 	}
 
-	*e = EDGE(b, y);
+	*e =  b;
 	*f = *g;
-	*g = EDGE(a, x);
+	*g =  a;
 }
 
 static void
