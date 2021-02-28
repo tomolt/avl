@@ -141,43 +141,48 @@ int
 avl_delete(AVL *avl, uintmax_t key)
 {
 	uintptr_t stack[MAXDEPTH];
-	Edge *edge;
-	Node *node, *target = NULL;
+	Node *node, *parent, *target = NULL, *child;
 	int depth = 0, d;
-	int balan;
+	int first;
 
-	edge = (Edge *) &avl->root;
-	while (*edge) {
-		node = NODE(*edge);
+	node = avl->root;
+	while (node) {
 		if (key == node->key) {
 			target = node;
-			d = BALAN(*edge) > 0;
+			d = node->bal > 0;
 		} else {
 			d = key > node->key;
 		}
-		PUSH(stack, depth, d, edge);
-		edge = &node->edges[d];
+		stack[depth++] = (uintptr_t) node | d;
+		node = node->edges[d];
 	}
-
 	if (!target) return 0;
+
+	d = stack[--depth] & 1;
+	node = (Node *) (stack[depth] ^ d);
 	target->key   = node->key;
 	target->value = node->value;
-	POP(stack, depth, d, edge);
-	*edge = node->edges[!d];
+
+	child = node->edges[!d];
 	free(node);
+	node = child;
+	first = 1;
 
 	while (depth) {
-		POP(stack, depth, d, edge);
-		balan = BALAN(*edge);
-		balan -= d ? 1 : -1;
-		*edge = EDGE(NODE(*edge), balan);
-		if (balan < -1 || balan > 1) {
-			balance(edge);
+		d = stack[--depth] & 1;
+		parent = (Node *) (stack[depth] ^ d);
+		parent->edges[d] = node;
+		if (!first && node->bal) goto done;
+		parent->bal -= d ? 1 : -1;
+		if (parent->bal < -1 || parent->bal > 1) {
+			balance(&parent);
 		}
-		balan = BALAN(*edge);
-		if (balan) break;
+		node = parent;
+		first = 0;
 	}
+	avl->root = node;
 
+done:
 	return 1;
 }
 

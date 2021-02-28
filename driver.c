@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+//#include <assert.h>
+
 #include "avl.h"
 
 #define MAX_KEY 10000
@@ -106,6 +108,7 @@ drive(void)
 				if (a != b) {
 					valid = 0;
 				}
+				//assert(avl_check(&_avl) >= 0);
 				counter++;
 			}
 			break;
