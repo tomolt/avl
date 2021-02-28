@@ -77,19 +77,15 @@ avl_init(AVL *avl)
 int
 avl_lookup(AVL *avl, uintmax_t key, void **value)
 {
-	Edge edge;
 	Node *node;
-	int d;
 	
-	edge = avl->root;
-	while (edge) {
-		node = NODE(edge);
+	node = avl->root;
+	while (node) {
 		if (key == node->key) {
 			*value = node->value;
 			return 1;
 		}
-		d = key > node->key;
-		edge = node->edges[d];
+		node = node->edges[key > node->key];
 	}
 	
 	return 0;
@@ -111,7 +107,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 			return 0;
 		}
 		d = key > node->key;
-		node = NODE(node->edges[d]);
+		node = node->edges[d];
 	}
 
 	node = malloc(sizeof *node);
@@ -188,15 +184,12 @@ avl_delete(AVL *avl, uintmax_t key)
 void
 avl_free(AVL *avl)
 {
-	Edge stack[MAXDEPTH];
-	Edge edge;
-	Node *node;
+	Node *stack[MAXDEPTH], *node;
 	int depth = 0;
 
 	stack[depth++] = avl->root;
 	while (depth) {
-		edge = stack[--depth];
-		node = NODE(edge);
+		node = stack[--depth];
 		if (node->edges[0]) {
 			stack[depth++] = node->edges[0];
 		}
@@ -205,52 +198,48 @@ avl_free(AVL *avl)
 		}
 		free(node);
 	}
-	avl->root = 0;
+	avl_init(avl);
 }
 
 static int
-check_edge(Edge edge)
+check_node(Node *node)
 {
-	Node *node;
-	int bal, l, h;
-	if (!edge) return 0;
-	node = NODE(edge);
-	bal  = BALAN(edge);
-	l = check_edge(node->edges[0]);
+	int l, h;
+	if (!node) return 0;
+	l = check_node(node->edges[0]);
 	if (l < 0) return l;
-	h = check_edge(node->edges[1]);
+	h = check_node(node->edges[1]);
 	if (h < 0) return h;
-	if (bal != h - l) return -1;
-	if (bal < -1 || bal > 1) return -2;
+	if (node->bal != h - l) return -1;
+	if (node->bal < -1) return -2;
+	if (node->bal >  1) return -2;
 	return MAX(l, h) + 1;
 }
 
 int
 avl_check(AVL *avl)
 {
-	return check_edge(avl->root);
+	return check_node(avl->root);
 }
 
 static void
-print_edge(Edge edge, int col, FILE *file)
+print_node(Node *node, int col, FILE *file)
 {
-	Node *node;
-	
-	node = NODE(edge);
-	fprintf(file, " %+d[%03ju]", BALAN(edge), node->key);
+	int i;
+
+	fprintf(file, " %+d[%03ju]", node->bal, node->key);
 	col += 8;
 
 	if (node->edges[0]) {
-		print_edge(node->edges[0], col, file);
+		print_node(node->edges[0], col, file);
 	}
 
 	if (node->edges[1]) {
 		putc('\n', file);
-		for (int i = 0; i < col; ++i) {
+		for (i = 0; i < col; ++i) {
 			putc(' ', file);
 		}
-
-		print_edge(node->edges[1], col, file);
+		print_node(node->edges[1], col, file);
 	}
 }
 
@@ -258,7 +247,7 @@ void
 avl_print(AVL *avl, void *file)
 {
 	if (avl->root) {
-		print_edge(avl->root, 0, file);
+		print_node(avl->root, 0, file);
 		putc('\n', file);
 	}
 }
