@@ -9,9 +9,6 @@
 #define BALAN(e)  (NODE(e)->bal)
 #define EDGE(n,b) ((n)->bal=(b),(n))
 
-#define PUSH(s,t,d,e) (s[t++]=(uintptr_t)e|d)
-#define POP(s,t,d,e)  (t--,d=s[t]&1,e=(Edge*)(s[t]^d))
-
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -24,6 +21,18 @@ struct Node {
 	Edge      edges[2];
 	int8_t    bal;
 };
+
+static Node *
+path_to(Node *node, uintmax_t key, uintptr_t stack[], int *depth)
+{
+	int d;
+	while (node && key != node->key) {
+		d = key > node->key;
+		stack[(*depth)++] = (uintptr_t) node | d;
+		node = node->edges[d];
+	}
+	return node;
+}
 
 static void
 rotate(Edge *e, int d)
@@ -57,14 +66,15 @@ balance(Edge *e)
 {
 	Edge *f;
 	Node *a, *b;
-	int x, y;
+	int d;
 	a = *e;
-	f = &a->edges[x > 0];
+	d = a->bal > 0;
+	f = &a->edges[d];
 	b = *f;
 	if (a->bal * b->bal < 0) {
-		rotate(f, a->bal < 0);
+		rotate(f, !d);
 	}
-	rotate(e, a->bal > 0);
+	rotate(e, d);
 }
 
 void
@@ -93,20 +103,15 @@ avl_lookup(AVL *avl, uintmax_t key, void **value)
 int
 avl_insert(AVL *avl, uintmax_t key, void *value)
 {
-	Node *stack[MAXDEPTH];
+	uintptr_t stack[MAXDEPTH];
 	Node *node, *parent;
 	int depth = 0, d;
 	int first;
 
-	node = avl->root;
-	while (node) {
-		stack[depth++] = node;
-		if (key == node->key) {
-			node->value = value;
-			return 0;
-		}
-		d = key > node->key;
-		node = node->edges[d];
+	node = path_to(avl->root, key, stack, &depth);
+	if (node) {
+		node->value = value;
+		return 0;
 	}
 
 	node = malloc(sizeof *node);
@@ -119,8 +124,8 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	first = 1;
 
 	while (depth) {
-		parent = stack[--depth];
-		d = key > parent->key;
+		d = stack[--depth] & 1;
+		parent = (Node *) (stack[depth] ^ d);
 		parent->edges[d] = node;
 		if (!first && !node->bal) goto done;
 		parent->bal += d ? 1 : -1;
@@ -202,7 +207,7 @@ avl_free(AVL *avl)
 		}
 		free(node);
 	}
-	avl_init(avl);
+	avl->root = 0;
 }
 
 static int
