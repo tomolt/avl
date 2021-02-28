@@ -9,6 +9,9 @@
 #define BALAN(e)  (NODE(e)->bal)
 #define EDGE(n,b) ((n)->bal=(b),(n))
 
+#define PUSH(s,t,n,d) (s[(t)++]=(uintptr_t)n|d)
+#define POP(s,t,n,d)  (d=s[--(t)]&1,n=(Node*)(s[t]^d))
+
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -28,7 +31,7 @@ path_to(Node *node, uintmax_t key, uintptr_t stack[], int *depth)
 	int d;
 	while (node && key != node->key) {
 		d = key > node->key;
-		stack[(*depth)++] = (uintptr_t) node | d;
+		PUSH(stack, *depth, node, d);
 		node = node->edges[d];
 	}
 	return node;
@@ -88,8 +91,7 @@ retrace(AVL *avl, Node *node, int grow,
 			avl->root = node;
 			break;
 		}
-		d = stack[--*depth] & 1;
-		parent = (Node *) (stack[*depth] ^ d);
+		POP(stack, *depth, parent, d);
 		parent->edges[d] = node;
 		if (!chg) {
 			break;
@@ -163,32 +165,23 @@ int
 avl_delete(AVL *avl, uintmax_t key)
 {
 	uintptr_t stack[MAXDEPTH];
-	Node *node, *target = NULL, *child;
+	Node *node, *target = NULL;
 	int depth = 0, d;
 
-	node = avl->root;
-	while (node) {
-		if (key == node->key) {
-			target = node;
-			d = node->bal > 0;
-		} else {
-			d = key > node->key;
-		}
-		stack[depth++] = (uintptr_t) node | d;
-		node = node->edges[d];
+	target = path_to(avl->root, key, stack, &depth);
+	if (!target) {
+		return 0;
 	}
-	if (!target) return 0;
+	d = target->bal > 0;
+	PUSH(stack, depth, target, d);
+	path_to(target->edges[d], key, stack, &depth);
 
-	d = stack[--depth] & 1;
-	node = (Node *) (stack[depth] ^ d);
+	POP(stack, depth, node, d);
 	target->key   = node->key;
 	target->value = node->value;
 
-	child = node->edges[!d];
+	retrace(avl, node->edges[!d], 0, stack, &depth);
 	free(node);
-	node = child;
-
-	retrace(avl, node, 0, stack, &depth);
 	return 1;
 }
 
