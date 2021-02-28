@@ -138,7 +138,7 @@ avl_delete(AVL *avl, uintmax_t key)
 {
 	uintptr_t stack[MAXDEPTH];
 	Edge *edge;
-	Node *node, *target;
+	Node *node, *target = NULL;
 	int depth = 0, d;
 	int balan;
 
@@ -156,9 +156,10 @@ avl_delete(AVL *avl, uintmax_t key)
 	}
 
 	if (!target) return 0;
-	target->key = node->key;
+	target->key   = node->key;
 	target->value = node->value;
-	*edge = 0;
+	POP(stack, depth, d, edge);
+	*edge = node->edges[!d];
 	free(node);
 
 	while (depth) {

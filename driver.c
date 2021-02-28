@@ -3,7 +3,7 @@
 
 #include "avl.h"
 
-#define MAX_KEY 1000
+#define MAX_KEY 10000
 
 typedef struct {
 	uint8_t   *bits;
@@ -57,23 +57,34 @@ robmod(size_t n, size_t m)
 static AVL _avl;
 static Ref _ref;
 
+static const char *OpNames[] = {
+	"INSERTION",
+	"DELETION",
+	"LOOKUP",
+	"CONSISTENCY CHECK",
+};
+
 static void
 drive(void)
 {
 	uintmax_t key;
-	size_t run, counter;
+	size_t run, counter, checkpoint, stride;
 	void *tmp;
 	int a, b;
+	int valid = 1, op;
 
 	_avl = 0;
 	ref_init(&_ref);
 	srand(0);
 	
-	printf("#IT\t#EL\n");
+	printf("#OPS\t#ELS\n");
 	
 	counter = 0;
-	for (;;) {
-		switch (rand() % 4) {
+	stride = 10000;
+	checkpoint = stride;
+	while (valid) {
+		op = rand() % 4;
+		switch (op) {
 		case 0: /* insert multiple */
 			run = robmod(rand(), MAX_KEY - _ref.num);
 			while (run--) {
@@ -81,22 +92,22 @@ drive(void)
 				a = avl_insert(&_avl, key, NULL);
 				b = ref_insert(&_ref, key);
 				if (a != b) {
-					printf("bad insert\n");
+					valid = 0;
 				}
+				counter++;
 			}
 			break;
 		case 1: /* delete multiple */
-#if 0
 			run = robmod(rand(), _ref.num);
 			while (run--) {
 				key = rand() % MAX_KEY;
 				a = avl_delete(&_avl, key);
 				b = ref_delete(&_ref, key);
 				if (a != b) {
-					printf("bad delete\n");
+					valid = 0;
 				}
+				counter++;
 			}
-#endif
 			break;
 		case 2: /* lookup multiple */
 			run = robmod(rand(), _ref.num);
@@ -105,21 +116,32 @@ drive(void)
 				a = avl_lookup(&_avl, key, &tmp);
 				b = ref_lookup(&_ref, key);
 				if (a != b) {
-					printf("bad lookup\n");
+					valid = 0;
 				}
+				counter++;
 			}
 			break;
 		case 3: /* consistency check */
 			a = avl_check(_avl);
 			if (a < 0) {
-				printf("inconsistency\n");
+				valid = 0;
 			}
+			counter++;
 			break;
 		}
-		counter++;
-		if (counter % 10000 == 0) {
+		if (counter >= checkpoint) {
 			printf("%ju\t%ju\n", counter, _ref.num);
+			stride += stride / 10;
+			checkpoint += stride;
 		}
+		if (counter > 10000000) break;
+	}
+
+	if (valid) {
+		printf("%ju\t%ju\tSUCCESS\n", counter, _ref.num);
+	} else {
+		printf("%ju\t%ju\t%s FAILED\n", counter, _ref.num, OpNames[op]);
+		avl_print(_avl, stdout);
 	}
 	
 	avl_free(&_avl);
