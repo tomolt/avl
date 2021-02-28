@@ -5,10 +5,9 @@
 
 #define MAXDEPTH 64
 
-#define SHIFT     (8*sizeof(Edge)-3)
-#define NODE(e)   ((Node*)((e)<<3))
-#define BALAN(e)  ((int)((e)>>SHIFT))
-#define EDGE(n,b) ((Edge)(n)>>3|(Edge)(b)<<SHIFT)
+#define NODE(e)   (e)
+#define BALAN(e)  (NODE(e)->bal)
+#define EDGE(n,b) ((n)->bal=(b),(n))
 
 #define PUSH(s,t,d,e) (s[t++]=(uintptr_t)e|d)
 #define POP(s,t,d,e)  (t--,d=s[t]&1,e=(Edge*)(s[t]^d))
@@ -17,12 +16,13 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
 typedef struct Node Node;
-typedef intptr_t    Edge;
+typedef Node       *Edge;
 
 struct Node {
 	uintmax_t key;
 	void     *value;
 	Edge      edges[2];
+	int8_t    bal;
 };
 
 static void
@@ -104,7 +104,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	int depth = 0, d;
 	int balan;
 
-	edge = &avl->root;
+	edge = (Edge *) &avl->root;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {
@@ -148,7 +148,7 @@ avl_delete(AVL *avl, uintmax_t key)
 	int depth = 0, d;
 	int balan;
 
-	edge = &avl->root;
+	edge = (Edge *) &avl->root;
 	while (*edge) {
 		node = NODE(*edge);
 		if (key == node->key) {

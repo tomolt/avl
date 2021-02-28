@@ -6,7 +6,7 @@
 typedef struct AVL AVL;
 
 struct AVL {
-	intptr_t root;
+	void *root;
 };
 
 void avl_init  (AVL *avl);
