@@ -56,16 +56,15 @@ static void
 balance(Edge *e)
 {
 	Edge *f;
-	Node *a;
+	Node *a, *b;
 	int x, y;
-	a = NODE(*e);
-	x = BALAN(*e);
+	a = *e;
 	f = &a->edges[x > 0];
-	y = BALAN(*f);
-	if (x * y < 0) {
-		rotate(f, x < 0);
+	b = *f;
+	if (a->bal * b->bal < 0) {
+		rotate(f, a->bal < 0);
 	}
-	rotate(e, x > 0);
+	rotate(e, a->bal > 0);
 }
 
 void
