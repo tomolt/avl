@@ -12,31 +12,18 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
 typedef struct Node Node;
-typedef Node       *Edge;
 
 struct Node {
 	uintmax_t key;
 	void     *value;
-	Edge      edges[2];
+	Node     *edges[2];
 	int8_t    bal;
 };
 
-static Node *
-path_to(Node *node, uintmax_t key, uintptr_t stack[], int *depth)
-{
-	int d;
-	while (node && key != node->key) {
-		d = key > node->key;
-		PUSH(stack, *depth, node, d);
-		node = node->edges[d];
-	}
-	return node;
-}
-
 static void
-rotate(Edge *e, int d)
+rotate(Node **e, int d)
 {
-	Edge *f, *g;
+	Node **f, **g;
 	Node *a, *b;
 
 	a = *e;
@@ -58,9 +45,9 @@ rotate(Edge *e, int d)
 }
 
 static void
-balance(Edge *e)
+balance(Node **e)
 {
-	Edge *f;
+	Node **f;
 	Node *a, *b;
 	int d;
 	a = *e;
@@ -104,6 +91,18 @@ retrace(AVL *avl, Node *node, int grow,
 			chg = node->bal == 0;
 		}
 	}
+}
+
+static Node *
+path_to(Node *node, uintmax_t key, uintptr_t stack[], int *depth)
+{
+	int d;
+	while (node && key != node->key) {
+		d = key > node->key;
+		PUSH(stack, *depth, node, d);
+		node = node->edges[d];
+	}
+	return node;
 }
 
 void
