@@ -12,52 +12,53 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
 typedef struct Node Node;
+typedef Node *Edge;
 
 struct Node {
 	uintmax_t key;
 	void     *value;
-	Node     *edges[2];
-	int8_t    bal;
+	Edge      edges[2];
+	int8_t    balance;
 };
 
 static void
-rotate(Node **e, int d)
+rotate(Edge *edge, int direction)
 {
-	Node **f, **g;
-	Node *a, *b;
+	Edge *pivotEdge, *otherEdge;
+	Node *pivotNode, *childNode;
 
-	a = *e;
-	f = &a->edges[d];
-	b = *f;
-	g = &b->edges[!d];
+	pivotNode = *edge;
+	pivotEdge = &pivotNode->edges[direction];
+	childNode = *pivotEdge;
+	otherEdge = &childNode->edges[!direction];
 	
-	if (d) { /* CCW rotation */
-		a->bal = a->bal - 1 - MAX(b->bal, 0);
-		b->bal = b->bal - 1 + MIN(a->bal, 0);
+	if (direction) { /* CCW rotation */
+		pivotNode->balance = pivotNode->balance - 1 - MAX(childNode->balance, 0);
+		childNode->balance = childNode->balance - 1 + MIN(pivotNode->balance, 0);
 	} else { /* CW rotation */
-		a->bal = a->bal + 1 - MIN(b->bal, 0);
-		b->bal = b->bal + 1 + MAX(a->bal, 0);
+		pivotNode->balance = pivotNode->balance + 1 - MIN(childNode->balance, 0);
+		childNode->balance = childNode->balance + 1 + MAX(pivotNode->balance, 0);
 	}
 
-	*e =  b;
-	*f = *g;
-	*g =  a;
+	*edge      =  childNode;
+	*pivotEdge = *otherEdge;
+	*otherEdge =  pivotNode;
 }
 
 static void
-balance(Node **e)
+balance(Edge *edge)
 {
 	Node **f;
 	Node *a, *b;
-	int d;
-	a = *e;
-	d = a->bal > 0;
-	f = &a->edges[d];
+	int direction;
+	a = *edge;
+	direction = a->balance > 0;
+	f = &a->edges[direction];
 	b = *f;
-	if (a->bal * b->bal < 0) {
-		rotate(f, !d);
+	if (a->balance * b->balance < 0) {
+		rotate(f, !direction);
 	}
-	rotate(e, d);
+	rotate(edge, direction);
 }
 
 static void
@@ -65,30 +66,30 @@ retrace(AVL *avl, Node *node, int grow,
 	uintptr_t stack[], int *depth)
 {
 	Node *parent;
-	int d, chg = 1;
+	int direction, changed = 1;
 	for (;;) {
 		if (!*depth) {
 			avl->root = node;
 			break;
 		}
-		POP(stack, *depth, parent, d);
-		parent->edges[d] = node;
-		if (!chg) {
+		POP(stack, *depth, parent, direction);
+		parent->edges[direction] = node;
+		if (!changed) {
 			break;
 		}
 		if (grow) {
-			parent->bal += d ? 1 : -1;
+			parent->balance += direction ? 1 : -1;
 		} else {
-			parent->bal -= d ? 1 : -1;
+			parent->balance -= direction ? 1 : -1;
 		}
-		if (parent->bal < -1 || parent->bal > 1) {
+		if (parent->balance < -1 || parent->balance > 1) {
 			balance(&parent);
 		}
 		node = parent;
 		if (grow) {
-			chg = node->bal != 0;
+			changed = node->balance != 0;
 		} else {
-			chg = node->bal == 0;
+			changed = node->balance == 0;
 		}
 	}
 }
@@ -96,11 +97,11 @@ retrace(AVL *avl, Node *node, int grow,
 static Node *
 path_to(Node *node, uintmax_t key, uintptr_t stack[], int *depth)
 {
-	int d;
+	int direction;
 	while (node && key != node->key) {
-		d = key > node->key;
-		PUSH(stack, *depth, node, d);
-		node = node->edges[d];
+		direction = key > node->key;
+		PUSH(stack, *depth, node, direction);
+		node = node->edges[direction];
 	}
 	return node;
 }
@@ -147,7 +148,7 @@ avl_insert(AVL *avl, uintmax_t key, void *value)
 	node->value = value;
 	node->edges[0] = 0;
 	node->edges[1] = 0;
-	node->bal = 0;
+	node->balance = 0;
 
 	retrace(avl, node, 1, stack, &depth);
 	return 1;
@@ -158,21 +159,21 @@ avl_delete(AVL *avl, uintmax_t key)
 {
 	uintptr_t stack[MAXDEPTH];
 	Node *node, *target = NULL;
-	int depth = 0, d;
+	int depth = 0, direction;
 
 	target = path_to(avl->root, key, stack, &depth);
 	if (!target) {
 		return 0;
 	}
-	d = target->bal > 0;
-	PUSH(stack, depth, target, d);
-	path_to(target->edges[d], key, stack, &depth);
+	direction = target->balance > 0;
+	PUSH(stack, depth, target, direction);
+	path_to(target->edges[direction], key, stack, &depth);
 
-	POP(stack, depth, node, d);
+	POP(stack, depth, node, direction);
 	target->key   = node->key;
 	target->value = node->value;
 
-	retrace(avl, node->edges[!d], 0, stack, &depth);
+	retrace(avl, node->edges[!direction], 0, stack, &depth);
 	free(node);
 	return 1;
 }
@@ -200,16 +201,16 @@ avl_free(AVL *avl)
 static int
 check_node(Node *node)
 {
-	int l, h;
+	int height0, height1;
 	if (!node) return 0;
-	l = check_node(node->edges[0]);
-	if (l < 0) return l;
-	h = check_node(node->edges[1]);
-	if (h < 0) return h;
-	if (node->bal != h - l) return -1;
-	if (node->bal < -1) return -2;
-	if (node->bal >  1) return -2;
-	return MAX(l, h) + 1;
+	height0 = check_node(node->edges[0]);
+	if (height0 < 0) return height0;
+	height1 = check_node(node->edges[1]);
+	if (height1 < 0) return height1;
+	if (node->balance != height1 - height0) return -1;
+	if (node->balance < -1) return -2;
+	if (node->balance >  1) return -2;
+	return MAX(height0, height1) + 1;
 }
 
 int
@@ -222,7 +223,7 @@ static void
 print_node(Node *node, int col, FILE *file)
 {
 	int i;
-	fprintf(file, " %+d[%03ju]", node->bal, node->key);
+	fprintf(file, " %+d[%03ju]", node->balance, node->key);
 	col += 8;
 	if (node->edges[0]) {
 		print_node(node->edges[0], col, file);
